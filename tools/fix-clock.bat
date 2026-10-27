@@ -36,6 +36,9 @@ set "W32=HKLM\SYSTEM\CurrentControlSet\Services\W32Time"
 
 echo Clock before: %date% %time%
 
+echo 0/6 Time zone: Pakistan (UTC+05:00)
+tzutil /s "Pakistan Standard Time"
+
 echo 1/6 Windows Time service: always running (not just Sundays 1 AM)
 rem Microsoft KB 2385818: on a workgroup PC the service stops itself after every boot even when set to
 rem Automatic, and Windows only syncs from a Sunday 1:00 AM task. Removing the trigger keeps it running.

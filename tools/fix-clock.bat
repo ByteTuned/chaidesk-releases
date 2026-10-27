@@ -8,7 +8,8 @@ rem  to the correct time while it runs, so run it at a quiet moment.
 rem  ChaiDesk's "Fix clock" button (3.4.8+) does the same from inside the app.
 rem
 rem  What it does (settings from Microsoft's Windows Time documentation):
-rem   1. Windows Time service on, starting automatically
+rem   1. Windows Time service always on (by default a shop PC only checks the
+rem      time on Sundays at 1 AM, and skips it if the PC is off then)
 rem   2. Allow correcting any offset (default refuses more than 15 hours),
 rem      sync every hour (default is once a week), turn off Secure Time
 rem      Seeding (it can make the clock jump)
@@ -35,7 +36,10 @@ set "W32=HKLM\SYSTEM\CurrentControlSet\Services\W32Time"
 
 echo Clock before: %date% %time%
 
-echo 1/6 Windows Time service: automatic and running
+echo 1/6 Windows Time service: always running (not just Sundays 1 AM)
+rem Microsoft KB 2385818: on a workgroup PC the service stops itself after every boot even when set to
+rem Automatic, and Windows only syncs from a Sunday 1:00 AM task. Removing the trigger keeps it running.
+sc triggerinfo w32time delete >nul
 sc config w32time start= auto >nul
 sc query w32time | find "RUNNING" >nul || (
   w32tm /register >nul

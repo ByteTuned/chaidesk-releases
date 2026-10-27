@@ -1,5 +1,5 @@
-# ChaiDesk POS releases
+# ChaiDesk POS
 
-Installers and the auto-update feed for ChaiDesk POS. This repository holds release files only; the source code is private.
+Official downloads for ChaiDesk POS by ByteTuned Technologies.
 
-Download the latest installer from [Releases](https://github.com/ByteTuned/chaidesk-releases/releases/latest).
+Get the latest version from [Releases](https://github.com/ByteTuned/chaidesk-releases/releases/latest).

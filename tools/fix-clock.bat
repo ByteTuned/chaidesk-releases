@@ -14,16 +14,19 @@ rem      Seeding (it can make the clock jump)
 rem   3. Time servers: time.google.com, time.cloudflare.com, pool.ntp.org
 rem   4. Test that time sync gets through (UDP port 123)
 rem   5. Sync now. Only if the test failed: set the clock from a web page's
-rem      Date header and repeat that hourly with a scheduled task
+rem      Date header (HTTPS, else HTTP) hourly, from an admin-only folder
 rem  A report is saved to %PUBLIC%\chaidesk-clock-fix.txt
 rem ---------------------------------------------------------------------------
+
+set "QUIET="
+if /i "%~1"=="/quiet" set "QUIET=1"
 
 net session >nul 2>&1
 if errorlevel 1 (
   echo.
   echo  Please right-click this file and choose "Run as administrator".
   echo.
-  pause
+  if not defined QUIET pause
   exit /b 1
 )
 
@@ -67,13 +70,16 @@ goto finish
 :ntp_blocked
 call :say "    BLOCKED: time sync (UDP 123) does not get through from this PC."
 call :say "5/6 Setting the clock from the web instead, and every hour from now on"
-rem A scheduled task command is limited to 261 characters, so the clock step lives in its own file.
+rem A scheduled task command is limited to 261 characters, so the clock step lives in its own file,
+rem in a folder only Administrators and SYSTEM can write (the task runs it as SYSTEM).
 set "PSDIR=%ProgramData%\ChaiDesk"
 set "PS1=%PSDIR%\set-clock.ps1"
 if not exist "%PSDIR%" mkdir "%PSDIR%"
-> "%PS1%" echo $r = Invoke-WebRequest -UseBasicParsing -Method Head -Uri '%HTTPTIME%' -TimeoutSec 20
->>"%PS1%" echo $d = [DateTime]::Parse($r.Headers['Date']).ToLocalTime()
->>"%PS1%" echo Set-Date -Date $d ^| Out-Null
+icacls "%PSDIR%" /setowner *S-1-5-32-544 /T /C >>"%LOG%" 2>&1
+icacls "%PSDIR%" /inheritance:r /grant:r *S-1-5-32-544:(OI)(CI)F *S-1-5-18:(OI)(CI)F /T /C >>"%LOG%" 2>&1
+> "%PS1%" echo [Net.ServicePointManager]::SecurityProtocol = 'Tls12'
+>>"%PS1%" echo try { $r = Invoke-WebRequest -UseBasicParsing -Method Head -Uri 'https://www.google.com' -TimeoutSec 20 } catch { $r = Invoke-WebRequest -UseBasicParsing -Method Head -Uri '%HTTPTIME%' -TimeoutSec 20 }
+>>"%PS1%" echo Set-Date -Date ([DateTime]::Parse($r.Headers['Date']).ToLocalTime()) ^| Out-Null
 >>"%PS1%" echo 'Clock set from web: ' + (Get-Date)
 powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1%" >>"%LOG%" 2>&1
 if errorlevel 1 call :say "    Could not reach %HTTPTIME% - check the internet and run this again."
@@ -89,7 +95,7 @@ echo  Done. Check the time in the corner of the screen.
 echo  Report saved to %LOG%
 echo  Send a photo of this window, or that file, to support if anything failed.
 echo.
-pause
+if not defined QUIET pause
 exit /b 0
 
 :say
